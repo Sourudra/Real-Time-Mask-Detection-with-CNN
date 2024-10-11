@@ -39,23 +39,36 @@ def preprocess_frame(frame):
 # Streamlit app layout
 st.title("Real-Time Mask Detection")
 
+# Initialize session state for camera and running status
+if "camera" not in st.session_state:
+    st.session_state.camera = None
+if "running" not in st.session_state:
+    st.session_state.running = False
+
 # Start/stop button
 if st.button("Start Stream"):
-    st.session_state.camera = start_video_stream()
-    st.session_state.running = True
-    st.write("Camera started.")
+    if st.session_state.camera is None:
+        st.session_state.camera = start_video_stream()
+        if st.session_state.camera:
+            st.session_state.running = True
+            st.write("Camera started.")
+        else:
+            st.write("Failed to start the camera.")
+    else:
+        st.write("Camera is already running.")
 
 if st.button("Stop Stream"):
-    if "camera" in st.session_state:
+    if st.session_state.camera is not None:
         st.session_state.camera.release()
+        st.session_state.camera = None
         st.session_state.running = False
         st.write("Camera stopped.")
     else:
         st.write("Camera is not running.")
 
 # Display the video stream
-if "running" in st.session_state and st.session_state.running:
-    stframe = st.empty()
+if st.session_state.running:
+    stframe = st.empty()  # Placeholder for video stream
     
     while st.session_state.running:
         frame = capture_frame(st.session_state.camera)
@@ -71,10 +84,13 @@ if "running" in st.session_state and st.session_state.running:
 
             # Show the frame in the Streamlit app
             stframe.image(frame, channels="RGB", use_column_width=True)
+        else:
+            st.error("Error: Failed to capture frame.")
 
     # Release camera on stop
-    st.session_state.camera.release()
-    st.session_state.running = False
+    if st.session_state.camera:
+        st.session_state.camera.release()
+        st.session_state.camera = None
 
 # End of the app
 st.write("Press 'Start Stream' to begin video capture.")
